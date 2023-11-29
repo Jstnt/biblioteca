@@ -5,14 +5,12 @@ from datetime import date, datetime, timedelta
 from PIL import Image
 import mysql.connector
 from mysql.connector import Error
+import subprocess
 
-#GAMBIARRAS LIVRO
+#GAMBIARRAS
 valor = None #PEGAR VALOR DE PESQUISA
 b = 0 #INTERRUPTOR
 
-#GAMBIARRAS ALUNO
-valorALUNO = None
-c = 0
 
 class CadastroAlunos(CTkToplevel):
     def __init__(self, *args, **kwargs):
@@ -33,13 +31,13 @@ class CadastroAlunos(CTkToplevel):
         
         self.nome_label = CTkLabel(self, text="Nome:")
         self.nome_label.pack()
-        self.nome_entry = CTkEntry(self, width = 300)
-        self.nome_entry.pack()
+        self.nome = CTkEntry(self)
+        self.nome.pack()
         
         self.matricula_label = CTkLabel(self, text="Matrícula:")
         self.matricula_label.pack()
-        self.matricula_entry = CTkEntry(self, width = 300)
-        self.matricula_entry.pack(pady=5)
+        self.matricula = CTkEntry(self)
+        self.matricula.pack(pady=5)
 
         self.value_serie = StringVar()
         self.value_serie.set("1° Ano")
@@ -76,26 +74,7 @@ class CadastroAlunos(CTkToplevel):
         FrameC.grid(row=0,column=1,padx=3)
         FrameT.grid(row=0,column=2,padx=3)
         frame.pack()
-        CTkButton(self,text="Cadastrar", command= self.inserir).pack(pady=50)
-    def inserir(self):
-        con = mysql.connector.connect(user='root', database='bibliotecaeteavs', password='', host='localhost')
-        cursor = con.cursor()
-        s = self.value_serie.get()
-        n = self.nome_entry.get()
-        c = self.value_var.get()
-        t = self.value_Turma.get()
-        m = self.matricula_entry.get()
-
-        try:
-            cursor.execute("INSERT INTO alunos (Matricula, Nome, Serie, Curso,Turma) VALUES (%s, %s, %s, %s, %s)",
-                   (m,n,s,c,t))
-            con.commit()
-            print("Inserção bem-sucedida!")
-        except mysql.connector.Error as err:
-            print(f"Erro: {err}")
-        finally:
-            cursor.close()
-            con.close()
+        CTkButton(self,text="Cadastrar").pack(pady=50)
 
 class CadastroLivros(CTkToplevel):
     def __init__(self, *args, **kwargs):
@@ -203,8 +182,6 @@ class EmprestimosLivros(CTkToplevel):
         self.entry_DataDev.grid(row = 1, column = 1, sticky='w')
         self.entry_DataDev.delete(0, "end")
         self.entry_DataDev.insert(0, "15")
-
-
         colunas = ('id', 'ISBN','Titulo', 'Autor',  'CDD')
         self.treeT = ttk.Treeview(FrameT, columns=colunas, show='headings')
         self.treeT.heading('id', text='ID', anchor='w')
@@ -225,9 +202,11 @@ class EmprestimosLivros(CTkToplevel):
         FrameE.pack()
         FrameT.pack()
         FrameB.pack()
-        CTkButton(FrameB,text="Pesquisar Livro", command=self.InitPesquisarLivros).grid(row = 0, column = 0, padx = 3)
-        CTkButton(FrameB,text="Pesquisar Aluno", command=self.InitPesquisarAluno).grid(row = 0, column = 1, padx = 3)
-        CTkButton(FrameB,text="Emprestar").grid(row = 0, column = 2, padx = 3)
+
+        CTkButton(FrameB,text="Adicionar Livro", command=self.InitPesquisarLivros).grid(row = 0, column = 0, padx = 3)
+        CTkButton(FrameB,text="Excluir Livro").grid(row = 0, column = 1, padx = 3)
+        CTkButton(FrameB,text="Pesquisar Aluno").grid(row = 0, column = 2, padx = 3)
+        CTkButton(FrameB,text="Emprestar").grid(row = 0, column = 3, padx = 3)
 
         self.entry_DataDev.bind("<FocusOut>", self.atualizar_data)
 
@@ -237,7 +216,7 @@ class EmprestimosLivros(CTkToplevel):
         self.DataDevo.pack(side='bottom', anchor='se')
         self.atualizar_data()
         self.PesquisarLivro = None
-        self.PesquisarAluno = None  
+
         self.bind("<FocusIn>", self.pegarvalor)
 
     def InitPesquisarLivros(self):
@@ -247,25 +226,16 @@ class EmprestimosLivros(CTkToplevel):
             self.PesquisarLivro.grab_set()
         else:
             self.PesquisarLivro.grab_set()
-    def InitPesquisarAluno(self):
-        if self.PesquisarAluno is None or not self.PesquisarAluno.winfo_exists():
-            self.PesquisarAluno = PesquisarAluno()
-            self.PesquisarAluno.grab_set()
-        else:
-            self.PesquisarAluno.grab_set()
+        
 
 
 
     def pegarvalor(self, record):
         global valor
-        global valorALUNO
-        if c == 1:
-            self.entry_aluno.insert(0, valorALUNO[2])
-            self.entry_aluno.configure(state='disable')
-        else:
-            pass
+        global b
         if b == 1:
             self.treeT.insert("", "end", values=(valor))
+            b = 0
         else:
             pass
 
@@ -365,7 +335,7 @@ class PesquisarLivro(CTkToplevel):
         style = ttk.Style(self)
         style.configure("Treeview.Heading", font=('Arial', 10, 'bold'))
         self.geometry("800x600")
-        self.title("Pesquisar Livros")
+        self.title("Cadastrar Alunos")
         largura = self.winfo_screenwidth()
         altura = self.winfo_screenheight()
         x = (largura - 800) // 2
@@ -444,91 +414,6 @@ class PesquisarLivro(CTkToplevel):
             cursor.close()
             con.close()        
 
-class PesquisarAluno(CTkToplevel):
-    def __init__(self):
-        super().__init__()
-        style = ttk.Style(self)
-        style.configure("Treeview.Heading", font=('Arial', 10, 'bold'))
-        self.geometry("800x600")
-        self.title("Pesquisar Alunos")
-        largura = self.winfo_screenwidth()
-        altura = self.winfo_screenheight()
-        x = (largura - 800) // 2
-        y = (altura - 600) // 2
-        self.geometry(f"800x600+{x}+{y}")
-        FrameP = CTkFrame(self, fg_color="transparent")
-        FrameT = CTkFrame(self, fg_color="transparent")
-        self.pesquisa = CTkEntry(FrameP, width=600, fg_color= "white", text_color= "black")
-        self.pesquisa.grid(row = 0, column = 0, pady = 10)
-        colunas = ('IdAluno', "Nome", 'Matricula', 'Serie', 'Turma', 'Curso')
-        self.tree = ttk.Treeview(FrameT, columns=colunas, show='headings')
-        self.tree.heading('IdAluno', text='IdAluno', anchor='w')
-        self.tree.column('IdAluno', width=100)
-        self.tree.heading("Nome", text="Nome", anchor='w')
-        self.tree.column("Nome", width=200)
-        self.tree.heading('Matricula', text='Matricula', anchor='w')
-        self.tree.column('Matricula', width=160)
-        self.tree.heading( 'Serie', text= 'Serie', anchor='w')
-        self.tree.column( 'Serie', width=100)
-        self.tree.heading('Turma', text='Turma', anchor='w')
-        self.tree.column('Turma', width=100)
-        self.tree.heading('Curso', text='Curso', anchor='w')
-        self.tree.column('Curso', width=50)
-        scrollbar = ttk.Scrollbar(FrameT, orient="vertical", command=self.tree.yview)
-        self.tree.configure(yscrollcommand=scrollbar.set)
-
-        lupa = CTkImage(light_image=Image.open("img\lupa.png"), size=(20,20))
-
-        self.BttnPesquisa = CTkButton(FrameP, image=lupa, text = "", width = 20, command= self.executar_busca)
-        self.BttnPesquisa.grid(row = 0, column = 1)
-
-        scrollbar.pack(side="right", fill="y")
-        self.tree.pack()
-        self.tree.bind("<Double-1>", self.item_selecionado)
-        FrameP.pack()
-        FrameT.pack()
-        
-        
-
-    def item_selecionado(self, event=None):
-        for dadoS in self.tree.selection():
-            global c
-            global valorALUNO
-            item = self.tree.item(dadoS)
-            record = item['values']
-            valorALUNO=(record[0],record[1],record[2],record[3],record[5])
-            print(record)
-            self.destroy()
-            c = 1
-
-    def limpar_tabela(self):
-        for dado in self.tree.get_children():
-            self.tree.delete(dado)
-    def executar_busca(self):        
-        con = mysql.connector.connect(user='root', database='bibliotecaeteavs', password='', host='localhost')
-        cursor = con.cursor()
-        
-        aluno = self.pesquisa.get()
-        self.limpar_tabela()
-        try:
-            if aluno == "":
-                cursor.execute("SELECT * FROM alunos")
-            else:
-                cursor.execute("SELECT * FROM alunos WHERE titulo = %s", (aluno,))
-            
-            resultados = cursor.fetchall()
-
-            for resultado in resultados:
-                # Certifique-se de ajustar os índices de acordo com sua consulta SQL
-                self.tree.insert("", "end", values=(resultado[0], resultado[1], resultado[2], resultado[3], resultado[4], resultado[5]))
-
-        except mysql.connector.Error as err:
-            print(f"Erro: {err}")
-
-        finally:
-            cursor.close()
-            con.close()   
-
 class Home(CTk):
     def __init__(self):
         super().__init__()
@@ -576,40 +461,10 @@ class Home(CTk):
         else:
             self.DisponibilidadeLivros.grab_set()         
 
-class Login(CTk):
-    def __init__(self):
-        super().__init__()
-
-        FonteN = CTkFont(weight="bold", size= 14)
-        CTkLabel(self, text="Faça seu Login", font = FonteN).pack()
-        self.user = CTkEntry(self, placeholder_text="Insira o usuário")
-        self.user.pack(pady = 8)
-        self.password = CTkEntry(self, placeholder_text="Insira a Senha")
-        self.password.configure(show="*")
-        self.password.pack(pady = 8)
-        ok = CTkButton(self, text="ok",font = FonteN, command= self.show_error)
-        ok.pack(pady = 8)
-        #invoke é usado para "ativar" 
-        self.bind("<Return>", lambda event, button=ok: button.invoke())
-        self.user.focus_set()
-        self.password.focus_set()
-    def show_error(self):
-        if self.user.get() == "ete" and self.password.get() == "eteavs":
-            print("Login realizado")
-            Login.destroy(self)
-            initHome()
-        else:
-            # Mostrar mensagem de erro
-            CTkMessagebox(title="Error", message="Usuário ou Senha incorreta", icon="cancel")
-
-
 def initHome():
     home = Home()
     caminho_icone = "img\icone.ico"
-    try:
-        home.iconbitmap(caminho_icone)
-    except CTk.TclError:
-        print("Erro: Arquivo do ícone não encontrado.")
+    home.iconbitmap(caminho_icone)
     largura = home.winfo_screenwidth()
     altura = home.winfo_screenheight()
     x = (largura - 750) // 2
@@ -622,14 +477,14 @@ def initHome():
 
 #Iniciar o APP
 if __name__ == "__main__":
-    app = Login()
+    home = Home()
     caminho_icone = "img\icone.ico"
-    app.iconbitmap(caminho_icone)
-    largura = app.winfo_screenwidth()
-    altura = app.winfo_screenheight()
-    x = (largura - 200) // 2
-    y = (altura - 180) // 2
-    app.geometry(f"200x180+{x}+{y}")
-    app.title("")
-    app.resizable(0,0)
-    app.mainloop()
+    home.iconbitmap(caminho_icone)
+    largura = home.winfo_screenwidth()
+    altura = home.winfo_screenheight()
+    x = (largura - 750) // 2
+    y = (altura - 600) // 2
+    home.geometry(f"750x600+{x}+{y}")
+    home.title("")
+    home.resizable(0,0)
+    home.mainloop()   
